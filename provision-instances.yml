@@ -27,11 +27,11 @@
     # Use with_items to add each instances public IP to a new hostgroup for use in the next play.
 
     - name: Add new servers to host group
-      local_action: add_host name=item.public_dns_name groups=mysql
+      local_action: add_host name={{ item.public_dns_name }} groups=mysql
       with_items: ec2.instances
 
     - name: Wait for SSH to be available
-      local_action: wait_for host=item.public_dns_name port=22
+      local_action: wait_for host={{ item.public_dns_name }} port=22
       with_items: ec2.instances
 
     - name: Wait for full boot
@@ -44,10 +44,11 @@
         tags:
           Name: anstest
 
+
 # Now, configure our new servers
 
 - name: Configure servers
-  hosts: deploy
+  hosts: mysql
   user: ubuntu
   sudo: yes
   gather_facts: true
@@ -58,6 +59,19 @@
 
   tasks:
 
+    - name: Add Percona repository
+      action: command apt-key adv --keyserver keys.gnupg.net --recv-keys 1C4CBDCDCD2EFD2A
+
+    - name: Add Percona step 2
+      script: ./repo.sh
+
+    - name: Ensure /etc/mysql/ exists
+      file: path=/etc/mysql state=directory mode=755
+
+
+    - name: Copy my.cnf.sh to remote host and execute it
+      script: ./my.cnf.sh
+
     - name: Install Percona Server
-      apt: pkg=mysql-server-5.6 state=latest install_recommends=no update_cache=yes
+      apt: pkg=percona-server-server-5.6 state=latest install_recommends=no update_cache=yes
 
