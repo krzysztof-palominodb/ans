@@ -15,7 +15,7 @@
       security_group: mysql
       # bitnami-cloud-us-west-2/lampstack/bitnami-lampstack-5.4.11-1-linux-ubuntu-12.04.1-x86_64-s3.manifest.xml
       image: ami-35dbde5c
-      instance_count: 2
+      instance_count: 1
 
   # Provision 2 servers...
 
@@ -27,12 +27,19 @@
     # Use with_items to add each instances public IP to a new hostgroup for use in the next play.
 
     - name: Add new servers to host group
-      local_action: add_host name=${item.public_dns_name} groups=mysql
-      with_items: ${ec2.instances}
+      local_action: add_host name=item.public_dns_name groups=mysql
+      with_items: ec2.instances
+
+    - name: Tag instances
+      local_action: ec2_tag resource={{ item.id }} region=us-east-1 state=present
+      with_items: ec2.instances
+      args:
+        tags:
+          Name: anstest
 
     - name: Wait for SSH to be available
-      local_action: wait_for host=${item.public_dns_name} port=22
-      with_items: ${ec2.instances}
+      local_action: wait_for host=item.public_dns_name port=22
+      with_items: ec2.instances
 
     - name: Wait for full boot
       pause: seconds=15
