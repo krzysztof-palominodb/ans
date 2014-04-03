@@ -7,7 +7,7 @@
   - tag_Name_anstestmaster
   user: ubuntu
   sudo: yes
-  gather_facts: true
+  gather_facts: false 
 
   vars:
 
@@ -20,9 +20,13 @@
 
     - name: Get master coordinates
       mysql_replication: mode=getmaster
-      register: master_coords
+      register: master_coord
 
-    - debug: msg="coordinates {{ master_coords }}"
+    - add_host: name={{ ec2_dns_name }} groups=mysql mc=master_coord
+
+#    - debug: msg="test {{ ec2_dns_name }}"
+#    - debug: msg="coordinates {{ hostvars[tag_Name_anstestmaster] }}"  
+#    - debug: msg="coordinates {{ master_coords.File }} {{ master_coords.Position }}"
 
     - name: Create replication user
       mysql_user: name=repl password=ication priv=*.*:'REPLICATION CLIENT','REPLICATION SLAVE' state=present
@@ -44,7 +48,15 @@
 
   tasks:
 
+
+#    - debug: msg="coordinates {{ master_coords.File }} {{ master_coords.Position }}"  
+
+    - add_host: name={{ ec2_dns_name }} groups=mysql
+
+    - debug: msg="group {{ group_names }}"
+    - debug: msg=" test {{ play_hosts }}"
+
     - name: Change master to
-      mysql_replication: mode=changemaster master_host=tag_Name_anstestmaster.private_ip master_log_file=master_coords.File master_log_pos=master_coords.Position master_user=repl master_password=ication
+      mysql_replication: mode=changemaster  master_host={{ ansible_all_ipv4_addresses }} master_log_file=master_coords.File master_log_pos=master_coords.Position master_user=repl master_password=ication
     - name: start slave
       mysql_replication: mode=startslave
