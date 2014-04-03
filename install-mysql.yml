@@ -1,0 +1,50 @@
+---
+
+# Get master coordinates
+
+- name: Get coordinates from master
+  hosts:
+  - tag_Name_anstestmaster
+  user: ubuntu
+  sudo: yes
+  gather_facts: true
+
+  vars:
+
+      login_host: localhost
+      login_user: root
+      login_password:
+
+
+  tasks:
+
+    - name: Get master coordinates
+      mysql_replication: mode=getmaster
+      register: master_coords
+
+    - debug: msg="coordinates {{ master_coords }}"
+
+    - name: Create replication user
+      mysql_user: name=repl password=ication priv=*.*:'REPLICATION CLIENT','REPLICATION SLAVE' state=present
+
+# Setup replication on the slave
+
+- name: Setup replication on the slave
+  hosts:
+  - tag_Name_anstestslave
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+
+  vars:
+
+      login_host: localhost
+      login_user: root
+      login_password:
+
+  tasks:
+
+    - name: Change master to
+      mysql_replication: mode=changemaster master_host=tag_Name_anstestmaster.private_ip master_log_file=master_coords.File master_log_pos=master_coords.Position master_user=repl master_password=ication
+    - name: start slave
+      mysql_replication: mode=startslave
