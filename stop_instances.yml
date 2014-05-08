@@ -1,0 +1,14 @@
+---
+- hosts: localhost
+  gather_facts: false
+  connection: local
+  tasks:
+    - name: Stop the instances tagged as anstestmaster
+      local_action:
+        module: ec2
+        instance_ids: "{{hostvars[item]['ec2_id']}}"
+        state: stopped
+#        region: 'us-west-1'
+        wait: false
+      with_items:  groups.tag_Name_anstestmaster
+

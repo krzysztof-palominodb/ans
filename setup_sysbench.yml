@@ -1,0 +1,31 @@
+---
+
+
+- name: Configure sysbench
+
+  hosts:
+  - tag_Name_anssysbench
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+
+  tags:
+    - config
+    - configure
+
+  tasks:
+
+    - name: Install libperconaserverclient18.1-dev
+      apt: pkg=libperconaserverclient18.1-dev state=latest install_recommends=no update_cache=yes
+    - name: Install bzr
+      apt: pkg=bzr state=latest install_recommends=no update_cache=no
+    - name: Install automake
+      apt: pkg=automake state=latest install_recommends=no update_cache=no
+    - name: Install libtool
+      apt: pkg=libtool state=latest install_recommends=no update_cache=no
+    - name: Install make
+      apt: pkg=make state=latest install_recommends=no update_cache=no
+    - name: Install libssl-dev
+      apt: pkg=libssl-dev state=latest install_recommends=no update_cache=no
+    - name: Compile sysbench
+      script: ./sysbench.sh
