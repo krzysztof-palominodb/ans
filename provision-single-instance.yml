@@ -11,12 +11,12 @@
 
   vars:
       keypair: kkkey
-      instance_type: m2.2xlarge
-#      instance_type: r3.xlarge
+#      instance_type: m2.2xlarge
+      instance_type: r3.xlarge
       security_group: mysql
       # bitnami-cloud-us-west-2/lampstack/bitnami-lampstack-5.4.11-1-linux-ubuntu-12.04.1-x86_64-s3.manifest.xml
-#      image: ami-1d8c9574 # hvm
-      image: ami-018c9568 # paravirtual
+      image: ami-1d8c9574 # hvm
+#      image: ami-018c9568 # paravirtual
       instance_count: 1
 
   # Provision master
@@ -39,46 +39,46 @@
       with_items: ec2master.instances
 
     - name: Wait for full boot
-      pause: seconds=60
+      pause: seconds=15
 
     - name: Tag instances
       local_action: ec2_tag resource={{ item.id }} region=us-east-1 state=present
       with_items: ec2master.instances
       args:
         tags:
-          Name: anstestmaster
+          Name: '{{ tag }}'
 
 
 # Now, configure our new servers
 
-- name: Configure servers
-  hosts: mysql
-  user: ubuntu
-  sudo: yes
-  gather_facts: false
+#- name: Configure servers
+#  hosts: mysql
+#  user: ubuntu
+#  sudo: yes
+#  gather_facts: false
 
-  tags:
-    - config
-    - configure
+#  tags:
+#    - config
+#    - configure
 
-  tasks:
+#  tasks:
 
-    - name: Add Percona repository
-      action: command apt-key adv --keyserver keys.gnupg.net --recv-keys 1C4CBDCDCD2EFD2A
+#    - name: Add Percona repository
+#      action: command apt-key adv --keyserver keys.gnupg.net --recv-keys 1C4CBDCDCD2EFD2A
 
-    - name: Add Percona step 2
-      script: ./repo.sh
+#    - name: Add Percona step 2
+#      script: ./repo.sh
 
-    - name: Ensure /etc/mysql/ exists
-      file: path=/etc/mysql state=directory mode=755
+#    - name: Ensure /etc/mysql/ exists
+#      file: path=/etc/mysql state=directory mode=755
 
 
-    - name: Copy my.cnf.sh to remote host and execute it
-      script: ./my.cnf.sh
+#    - name: Copy my.cnf.sh to remote host and execute it
+#      script: ./my.cnf.sh
 
-    - name: Install Percona Server
-      apt: pkg=percona-server-server-5.6 state=latest install_recommends=no update_cache=yes
+#    - name: Install Percona Server
+#      apt: pkg=percona-server-server-5.6 state=latest install_recommends=no update_cache=yes
 
-    - name: Install python-mysqldb
-      apt: pkg=python-mysqldb state=latest install_recommends=no
+#    - name: Install python-mysqldb
+#      apt: pkg=python-mysqldb state=latest install_recommends=no
 

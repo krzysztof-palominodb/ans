@@ -4,7 +4,7 @@
 - name: Configure sysbench
 
   hosts:
-  - tag_Name_anssysbench
+  - tag_Name_{{ tag }}
   user: ubuntu
   sudo: yes
   gather_facts: false
@@ -15,8 +15,8 @@
 
   tasks:
 
-    - name: Install libperconaserverclient18.1-dev
-      apt: pkg=libperconaserverclient18.1-dev state=latest install_recommends=no update_cache=yes
+    - name: Install libmysqllient-dev
+      apt: pkg=libmysqlclient-dev state=latest install_recommends=no update_cache=yes
     - name: Install bzr
       apt: pkg=bzr state=latest install_recommends=no update_cache=no
     - name: Install automake

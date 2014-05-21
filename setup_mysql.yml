@@ -2,7 +2,7 @@
 
 - name: Configure servers
   hosts:
-  - tag_Name_anstestmaster
+  - tag_Name_{{ tag }}
   user: ubuntu
   sudo: yes
   gather_facts: false
