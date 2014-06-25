@@ -1,0 +1,29 @@
+---
+
+- name: Configure MHA node
+
+  hosts: 
+  - tag_Name_{{ tag }}
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+
+  tags:
+    - config
+    - configure
+
+  tasks:
+
+   - name: Install libdbd-mysql-perl
+     apt: pkg=libdbd-mysql-perl state=latest install_recommends=no update_cache=yes
+   - name: Install git
+     apt: pkg=git state=latest install_recommends=no update_cache=no
+   - name: Install make
+     apt: pkg=make state=latest install_recommends=no update_cache=no
+   - name: Install libmodule-install-perl
+     apt: pkg=libmodule-install-perl state=latest install_recommends=no update_cache=no
+   - name: Git checkout
+     git: repo=https://github.com/yoshinorim/mha4mysql-node.git dest=/root/mha4mysql-node
+   - name: Compile MHA node
+     script: mha_node.sh
+

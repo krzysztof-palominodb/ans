@@ -1,0 +1,60 @@
+---
+
+- name: Fill group
+
+  hosts:
+  - tag_Name_{{ tag1 }}
+  - tag_Name_{{ tag2 }}
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+  serial: 1
+
+  tags:
+    - config
+    - configure
+
+  tasks:
+
+   - add_host: name={{ ec2_dns_name }} groups=ha_nodes
+
+- name: Setup haproxy
+
+  hosts:
+  - tag_Name_{{ tag1 }}
+  - tag_Name_{{ tag2 }}
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+
+  tasks:
+
+#   - debug: msg="group {{ groups['ha_nodes'] }}"
+   - name: Install haproxy
+     apt: pkg=haproxy state=latest install_recommends=no update_cache=yes 
+   - name: Install xinetd
+     apt: pkg=xinetd state=latest install_recommends=no update_cache=no 
+   - name: Setup haproxy config from template
+     template: src=./haproxy_templates/haproxy.conf.j2 dest=/etc/haproxy/haproxy.cfg owner=root group=root mode=0644
+   - name: Setup mysqlchk xinetd service from template
+     template: src=./haproxy_templates/mysqlchk.j2 dest=/etc/xinetd.d/mysqlchk owner=root group=root mode=0644
+   - name: Setup mysqlmasterchk xinetd service from template
+     template: src=./haproxy_templates/mysqlmasterchk.j2 dest=/etc/xinetd.d/mysqlmasterchk owner=root group=root mode=0644
+   - name: Ensure mysqlchk is enabled in /etc/services
+     lineinfile: "dest=/etc/services regexp=^mysqlchk line='mysqlchk        3301/tcp                        # mysqlchk'"
+   - name: Ensure mysqlmasterchk is enabled in /etc/services
+     lineinfile: "dest=/etc/services regexp=^mysqlmasterchk line='mysqlmasterchk  3302/tcp                        # mysqlmasterchk'"
+   - name: Setup /opt/mysqlchk from template
+     template: src=./haproxy_templates/mysqlchk.sh.j2 dest=/opt/mysqlchk owner=root group=root mode=755
+   - name: Setup /opt/mysqlmasterchk from template
+     template: src=./haproxy_templates/mysqlmasterchk.sh.j2 dest=/opt/mysqlmasterchk owner=root group=root mode=755
+   - name: Setup /opt/mysql-load-balancer from template
+     template: src=./haproxy_templates/mysql-load-balancer.j2 dest=/opt/mysql-load-balancer owner=root group=root mode=755
+   - name: Grant privs to mysqlchkusr
+     mysql_user: name=mysqlchkusr host=localhost password=S3cr3tP4ss priv=*.*:'REPLICATION CLIENT'/mysql.*:SELECT state=present
+   - name: Start xinetd
+     service: name=xinetd state=started
+   - name: Start haproxy
+     service: name=haproxy state=started
+   - name: Setup a cronjob for /opt/mysql-load-balancer
+     cron: name="/opt/mysql-load-balancer" minute="*/5" job="/opt/mysql-load-balancer"

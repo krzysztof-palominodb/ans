@@ -12,8 +12,8 @@
   vars:
       keypair: kkkey
 #      instance_type: m2.2xlarge
-      instance_type: r3.xlarge
-      security_group: mysql
+      instance_type: m3.large
+      security_group: haproxy
       # bitnami-cloud-us-west-2/lampstack/bitnami-lampstack-5.4.11-1-linux-ubuntu-12.04.1-x86_64-s3.manifest.xml
       image: ami-1d8c9574 # hvm
 #      image: ami-018c9568 # paravirtual

@@ -1,0 +1,117 @@
+---
+
+# Get master coordinates
+
+- name: Get coordinates from master
+  hosts:
+  - tag_Name_{{ master }}
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+
+  vars:
+
+      login_host: localhost
+      login_user: root
+      login_password:
+
+
+  tasks:
+
+#    - name: Get master coordinates
+#      mysql_replication: mode=getmaster
+#      register: master_coord
+
+
+    - add_host: name={{ ec2_dns_name }} groups=mysql_master
+
+    - name: Create replication user
+      mysql_user: name=repl host=% password=ication priv=*.*:'REPLICATION CLIENT','REPLICATION SLAVE' state=present
+
+
+# Setup replication on the standby
+
+- name: Setup replication on the standby
+  hosts:
+  - tag_Name_{{ slave }}
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+
+  vars:
+
+      login_host: localhost
+      login_user: root
+      login_password:
+
+  tasks:
+
+
+    - add_host: name={{ ec2_dns_name }} groups=mysql_standby
+
+    - name: Create replication user
+      mysql_user: name=repl host=% password=ication priv=*.*:'REPLICATION CLIENT','REPLICATION SLAVE' state=present
+
+
+    - debug: msg="group {{ groups['mysql_master'] }}"
+
+    - name: Get master coordinates
+      mysql_replication: mode=getmaster
+      delegate_to: "{{ groups['mysql_master'][0] }}"
+      register: master_coords
+
+    - debug: msg="master_host={{ groups['mysql_master'][0] }} master_log_file={{ master_coords.File }} master_log_pos={{ master_coords.Position }} master_user=repl master_password=ication"
+
+    - name: Stop slave
+      mysql_replication: mode=stopslave
+
+    - name: Change master to
+      mysql_replication: mode=changemaster warnings_filtered=all master_host={{ groups['mysql_master'][0] }} master_log_file={{ master_coords.File }} master_log_pos={{ master_coords.Position }} master_user=repl master_password=ication
+    - name: start slave
+      mysql_replication: mode=startslave
+
+    - name: set read_only=1
+      command: mysql -e "set global read_only=1;"
+
+
+- name: Setup replication on the master
+  hosts:
+  - tag_Name_{{ master }}
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+
+  vars:
+
+      login_host: localhost
+      login_user: root
+      login_password:
+
+  tasks:
+
+    - name: Create replication user
+      mysql_user: name=repl host=% password=ication priv=*.*:'REPLICATION CLIENT','REPLICATION SLAVE' state=present
+
+#    - debug: msg="coordinates {{ master_coords.File }} {{ master_coords.Position }}"
+
+#    - add_host: name={{ ec2_dns_name }} groups=mysql
+
+    - debug: msg="group {{ groups['mysql_standby'] }}"
+#    - debug: msg=" test {{ play_hosts }}"
+
+#    - debug: msg="test {{ hostvars[groups['mysql']] }}
+#
+#    - debug: msg="test {{ hostvars[groups['mysql'][0]] }}
+
+    - name: Get master coordinates
+      mysql_replication: mode=getmaster
+      delegate_to: "{{ groups['mysql_standby'][0] }}"
+      register: master_coords
+
+    - debug: msg="master_host={{ groups['mysql_standby'][0] }} master_log_file={{ master_coords.File }} master_log_pos={{ master_coords.Position }} master_user=repl master_password=ication"
+    - name: Stop slave
+      mysql_replication: mode=stopslave
+    - name: Change master to
+      mysql_replication: mode=changemaster warnings_filtered=all master_host={{ groups['mysql_standby'][0] }} master_log_file={{ master_coords.File }} master_log_pos={{ master_coords.Position }} master_user=repl master_password=ication
+    - name: start slave
+      mysql_replication: mode=startslave

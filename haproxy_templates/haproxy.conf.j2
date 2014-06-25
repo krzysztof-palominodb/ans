@@ -1,0 +1,126 @@
+global
+    # Run in a chroot jail for extra security
+    user haproxy
+    group haproxy
+#    chroot /var/chroot/haproxy
+    # Make the process fork into background. This is the recommended mode of operation.
+    daemon
+    # Uncomment this if you want logging to go to stdout (also does not daemonize the process when it runs)
+    #debug
+    stats socket /tmp/haproxy
+defaults
+    #retries 3
+listen stats :8888
+    mode http
+    stats enable
+    stats hide-version
+    stats realm Haproxy\ Statistics
+    stats uri /
+    stats auth admin:pass
+frontend mysql_write_fe
+    bind *:3333
+    # Do TCP load balancing of MySQL requests. Must match backend section.
+    mode tcp
+    # Logging
+    # Leave off during normal operation
+    log 127.0.0.1 local0 debug
+    option tcplog
+    # Enable TCP keep-alive on client side
+    option clitcpka
+    # Maximum inactivity time on the client side.
+    # Should match backend "server" timeout to avoid complex debugging.
+    # Must also be greater than both the c3po connection pool's maxConnectionAge and maxIdleTime.
+    # TODO: Figure out why having a timeout here does not work
+    #timeout client 2h
+    #timeout client 5m
+    timeout client 365d
+    default_backend mysql_write_be
+ 
+backend mysql_write_be
+ 
+    # Do TCP load balancing of MySQL requests. Must match frontend section.
+    mode tcp
+    # Choose the back end with the fewest connections, and once chosen, stick to it (need to for prepared statements)
+    balance leastconn
+    stick-table type ip size 200k expire 30m
+    stick on src
+    # Logging
+    # Leave off during normal operation
+    # For log format, see: http://code.google.com/p/haproxy-docs/wiki/TCPLogFormat
+    log 127.0.0.1 local0 debug
+    option tcplog
+    # Enable TCP keep-alive on server side
+    option srvtcpka
+    # Number of times to try to connect to a server before trying another
+    retries 3
+    # Maximum time to wait for a connection attempt to a server to succeed
+    timeout connect 5s
+    # Maximum time to wait in the queue for a connection slot to be free
+    # When a server's maxconn is reached, connections are left pending in a queue
+    timeout queue 5s
+    # Maximum inactivity time on the server side.
+    # Should match frontend "client" timeout to avoid complex debugging.
+    # Must also be greater than both the c3po connection pool's maxConnectionAge and maxIdleTime.
+    # This directly represents the server's processing time for the request.
+    # TODO: Figure out why having a timeout here does not work
+    #timeout server 2h
+    #timeout server 5m
+    timeout server 365d
+    option httpchk
+    default-server weight 1 inter 2s maxconn 1000 rise 2 fall 2 fastinter 1us
+    server db1 {{ groups['ha_nodes'][0] }}:3306 check port 3302
+    server db2 {{ groups['ha_nodes'][1] }}:3306 check port 3302
+ 
+frontend mysql_read_fe
+    bind *:3334
+    # Do TCP load balancing of MySQL requests. Must match backend section.
+    mode tcp
+    # Logging
+    # Leave off during normal operation
+    log 127.0.0.1 local0 debug
+    option tcplog
+    # Enable TCP keep-alive on client side
+    option clitcpka
+    # Maximum inactivity time on the client side.
+    # Should match backend "server" timeout to avoid complex debugging.
+    # Must also be greater than both the c3po connection pool's maxConnectionAge and maxIdleTime.
+    # TODO: Figure out why having a timeout here does not work
+    #timeout client 2h
+    #timeout client 5m
+    timeout client 365d
+    default_backend mysql_read_be
+ 
+backend mysql_read_be
+ 
+    # Do TCP load balancing of MySQL requests. Must match frontend section.
+    mode tcp
+    # Choose the back end with the fewest connections, and once chosen, stick to it (need to for prepared statements)
+    balance leastconn
+    stick-table type ip size 200k expire 30m
+    stick on src
+    # Logging
+    # Leave off during normal operation
+    # For log format, see: http://code.google.com/p/haproxy-docs/wiki/TCPLogFormat
+    log 127.0.0.1 local0 debug
+    option tcplog
+    # Enable TCP keep-alive on server side
+    option srvtcpka
+    # Number of times to try to connect to a server before trying another
+    retries 3
+    # Maximum time to wait for a connection attempt to a server to succeed
+    timeout connect 5s
+    # Maximum time to wait in the queue for a connection slot to be free
+    # When a server's maxconn is reached, connections are left pending in a queue
+    timeout queue 5s
+    # Maximum inactivity time on the server side.
+    # Should match frontend "client" timeout to avoid complex debugging.
+    # Must also be greater than both the c3po connection pool's maxConnectionAge and maxIdleTime.
+    # This directly represents the server's processing time for the request.
+    # TODO: Figure out why having a timeout here does not work
+    #timeout server 2h
+    #timeout server 5m
+    timeout server 365d
+    option httpchk
+    default-server weight 1 inter 2s maxconn 1000 rise 2 fall 2 fastinter 1us
+    server db1 {{ groups['ha_nodes'][0] }}:3306  check port 3301
+    server db2 {{ groups['ha_nodes'][1] }}:3306 check port 3301

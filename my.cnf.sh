@@ -3,7 +3,7 @@
 cat <<EOF > /etc/mysql/my.cnf
 [mysqld]
 
-innodb_buffer_pool_size = 26G
+innodb_buffer_pool_size = 4G
 innodb_log_file_size = 512M
 innodb_log_files_in_group = 2
 innodb_log_buffer_size = 16M

@@ -1,0 +1,41 @@
+---
+
+- name: Create SSH key
+
+  hosts:
+  - tag_Name_{{ tag1 }}
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+
+  tasks:
+
+   - name: Create SSH key
+     user: name=root generate_ssh_key=yes ssh_key_bits=2048
+   - name: Fetch SSH pub key
+     fetch: src=/root/.ssh/id_rsa.pub dest=/Users/krzysztof/git/ans/mha_templates/id_rsa.pub flat=yes
+   - name: Fetch SSH priv key
+     fetch: src=/root/.ssh/id_rsa dest=/Users/krzysztof/git/ans/mha_templates/id_rsa flat=yes
+#   - name: Debug
+#     debug: msg="{{ lookup('file', '/Users/krzysztof/git/ans/mha_templates/id_rsa.pub') }}"
+
+
+
+- name: Setup SSH keys
+
+  hosts:
+  - tag_Name_{{ tag1 }}
+  - tag_Name_{{ tag2 }}
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+
+  tasks:
+
+   - name: Clear authorized_keys
+     shell: rm -f /root/.ssh/authorized_keys
+   - name: Setup SSH key on hosts
+     authorized_key: user=root key="{{ lookup('file', '/Users/krzysztof/git/ans/mha_templates/id_rsa.pub') }}"
+   - name: Copy SSH priv key
+     copy: src=/Users/krzysztof/git/ans/mha_templates/id_rsa dest=/root/.ssh/id_rsa owner=root group=root mode=0600
+

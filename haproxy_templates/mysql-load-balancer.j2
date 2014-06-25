@@ -1,0 +1,99 @@
+#!/bin/bash
+MYSQL_HOST="localhost"
+MYSQL_PORT="3306"
+MYSQL_USERNAME="mysqlchkusr"
+MYSQL_PASSWORD="S3cr3tP4ss"
+SLEEPSECONDS=1
+MASTERSTATE="/dev/shm/mysql-loadbalancer-monitor-masterstate"
+RUNNINGSTATE="/dev/shm/mysql-loadbalancer-monitor-runningstate"
+ERRORCOUNTS="/dev/shm/mysql-loadbalancer-monitor-errorcounts"
+TMP_FILE="/dev/shm/mysql-loadbalancer-monitor.out"
+ERR_FILE="/dev/shm/mysql-loadbalancer-monitor.err"
+
+#check to see if this script is already running and if it is then exit
+SCRIPT=`basename $0`
+PIDFILE='/tmp/mysql-loadbalancer-monitor.pid'
+RUNNINGPID='NONE'
+# this minimizes the amount of time that a running state or master state file can be in an undefined state due to currently being written without adding flocks (which could still be needed)
+function writestate {
+    filename=$1
+    oldstate=$2
+    newstate=$3
+    if [ "$oldstate" != "$newstate" ]
+    then
+        #echo "writing state: $filename, $oldstate, $newstate"
+        echo $newstate > $filename
+    fi
+}
+
+if [ -f $PIDFILE ]
+then
+    RUNNINGPID=`cat $PIDFILE`
+fi
+#echo "$$"
+if echo `ps aux | awk '{print $2}'` | grep -q $RUNNINGPID
+then
+    echo "Monitor currently running as pid: $RUNNINGPID"
+    echo "Exiting"
+    exit 1
+fi
+echo $$ > $PIDFILE
+while true
+do
+    MSTATE="$(/bin/cat $MASTERSTATE)"
+    RSTATE="$(/bin/cat $RUNNINGSTATE)"
+    ESTATE="$(/bin/cat $ERRORCOUNTS)"
+    if [[ $MSTATE = "" ]]
+    then
+        MSTATE="NONE"
+    fi
+    if [[ $ESTATE = "" ]]
+    then
+        ESTATE="NONE"
+    fi
+    if [[ $RSTATE = "" ]]
+    then
+        RSTATE="NONE"
+    fi
+    READONLY=`/usr/bin/mysql --host=$MYSQL_HOST --port=$MYSQL_PORT --user=$MYSQL_USERNAME --password=$MYSQL_PASSWORD -e"show global variables like 'read_only';" | grep "read_only" 2> /dev/null | awk '{print $2}'`
+    
+    if [ $READONLY = "OFF" ]
+    then
+        writestate $MASTERSTATE $MSTATE "MASTER"
+        #echo MASTER > $MASTERSTATE
+    elif [ $READONLY = "ON" ]
+    then
+        writestate $MASTERSTATE $MSTATE "SLAVE"
+        #echo SLAVE > $MASTERSTATE
+    fi
+    
+    
+    
+    ERRORS=0
+    if [ -f $ERRORCOUNTS ]
+    then
+            ERRORS=`cat $ERRORCOUNTS`
+    fi
+    
+    /usr/bin/mysql --host=$MYSQL_HOST --port=$MYSQL_PORT --user=$MYSQL_USERNAME --password=$MYSQL_PASSWORD -e"show databases;" > $TMP_FILE 2> $ERR_FILE
+    
+    if [ "$(/bin/cat $ERR_FILE)" != "" ]
+    then
+        writestate $RUNNINGSTATE $RSTATE "DOWN"
+        writestate $ERRORCOUNTS $ESTATE "0"
+        #echo DOWN > $RUNNINGSTATE
+        #echo 0 > $ERRORCOUNTS
+    
+    elif [ "$(/bin/cat $TMP_FILE)" != "" ]
+    then
+        writestate $RUNNINGSTATE $RSTATE "UP"
+        writestate $ERRORCOUNTS $ESTATE "0"
+        #echo UP > $RUNNINGSTATE
+        #echo 0 > $ERRORCOUNTS
+    else
+        ((ERRORS=$ERRORS+1))
+        writestate $ERRORCOUNTS $ESTATE $ERRORS
+        #echo $ERRORS > $ERRORCOUNTS
+    fi
+    
+done

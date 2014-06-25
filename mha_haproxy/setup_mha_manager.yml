@@ -1,0 +1,68 @@
+---
+
+- name: Configure MHA manager
+
+  hosts: 
+  - tag_Name_{{ tag1 }}
+  - tag_Name_{{ tag2 }}
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+  serial: 1
+
+  tags:
+    - config
+    - configure
+
+  tasks:
+
+   - debug: msg="name={{ ec2_dns_name }}"
+   - add_host: name={{ ec2_dns_name }} groups=mha_nodes
+   - debug: msg="nodes {{ groups['mha_nodes'] }}"
+
+   - name: Install libdbd-mysql-perl
+     apt: pkg=libdbd-mysql-perl state=latest install_recommends=no update_cache=yes
+   - name: Install git
+     apt: pkg=git state=latest install_recommends=no update_cache=no
+   - name: Install make
+     apt: pkg=make state=latest install_recommends=no update_cache=no
+   - name: Install libmodule-install-perl
+     apt: pkg=libmodule-install-perl state=latest install_recommends=no update_cache=no
+   - name: Install libconfig-tiny-perl
+     apt: pkg=libconfig-tiny-perl state=latest install_recommends=no update_cache=no
+   - name: Install liblog-dispatch-perl
+     apt: pkg=liblog-dispatch-perl state=latest install_recommends=no update_cache=no
+   - name: Install libparallel-forkmanager-perl
+     apt: pkg=libparallel-forkmanager-perl state=latest install_recommends=no update_cache=no
+   - name: Git checkout
+     git: repo=https://github.com/yoshinorim/mha4mysql-manager.git dest=/root/mha4mysql-manager
+   - name: Compile MHA manager
+     script: mha_manager.sh
+   - name: Setup log directory
+     file: path=/var/log/masterha/app1/ state=directory
+
+# Setup mha config
+
+- name: Setup MHA configuration
+  hosts:
+  - tag_Name_{{ tag1 }}
+  - tag_Name_{{ tag2 }}
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+
+  tags:
+    - config
+    - configure
+
+  tasks:
+#   - debug: msg="nodes {{ groups['mha_nodes'] }}"
+   - name: Setup config from template
+     template: src=./mha_templates/masterha.j2 dest=/etc/app1.cnf owner=root group=root mode=0644
+
+   - name: Install daemontools
+     apt: pkg=daemontools state=latest install_recommends=no update_cache=no
+
+   - name: Create services for svc
+     file: path=/service/masterha_app1/ state=directory
+   - template: src=./mha_templates/run.j2 dest=/service/masterha_app1/run owner=root group=root mode=0755

@@ -32,3 +32,5 @@
     - name: Install python-mysqldb
       apt: pkg=python-mysqldb state=latest install_recommends=no
 
+    - name: Create user
+      mysql_user: name=root host=% password=secretpass priv=*.*:'ALL' state=present
