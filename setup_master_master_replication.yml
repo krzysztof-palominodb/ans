@@ -25,6 +25,9 @@
 
     - add_host: name={{ ec2_dns_name }} groups=mysql_master
 
+    - name: Install libdbd-mysql-perl
+      apt: pkg=libdbd-mysql-perl state=latest install_recommends=no update_cache=yes
+
     - name: Create replication user
       mysql_user: name=repl host=% password=ication priv=*.*:'REPLICATION CLIENT','REPLICATION SLAVE' state=present
 
@@ -48,6 +51,9 @@
 
 
     - add_host: name={{ ec2_dns_name }} groups=mysql_standby
+
+    - name: Install libdbd-mysql-perl
+      apt: pkg=libdbd-mysql-perl state=latest install_recommends=no update_cache=yes
 
     - name: Create replication user
       mysql_user: name=repl host=% password=ication priv=*.*:'REPLICATION CLIENT','REPLICATION SLAVE' state=present

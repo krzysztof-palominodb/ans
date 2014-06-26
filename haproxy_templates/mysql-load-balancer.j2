@@ -77,7 +77,7 @@ do
     
     /usr/bin/mysql --host=$MYSQL_HOST --port=$MYSQL_PORT --user=$MYSQL_USERNAME --password=$MYSQL_PASSWORD -e"show databases;" > $TMP_FILE 2> $ERR_FILE
     
-    if [ "$(/bin/cat $ERR_FILE)" != "" ]
+    if [ "$(/bin/cat $ERR_FILE | grep -v "Warning: Using a password on the command line interface can be insecure.")" != "" ]
     then
         writestate $RUNNINGSTATE $RSTATE "DOWN"
         writestate $ERRORCOUNTS $ESTATE "0"

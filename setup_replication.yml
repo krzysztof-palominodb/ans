@@ -25,6 +25,9 @@
 
     - add_host: name={{ ec2_dns_name }} groups=mysql_master
 
+    - name: Install libdbd-mysql-perl
+      apt: pkg=libdbd-mysql-perl state=latest install_recommends=no update_cache=yes
+
     - name: Create replication user
       mysql_user: name=repl host=% password=ication priv=*.*:'REPLICATION CLIENT','REPLICATION SLAVE' state=present
 
@@ -45,6 +48,12 @@
       login_password:
 
   tasks:
+
+    - name: Install libdbd-mysql-perl
+      apt: pkg=libdbd-mysql-perl state=latest install_recommends=no update_cache=yes
+
+    - name: Create replication user
+      mysql_user: name=repl host=% password=ication priv=*.*:'REPLICATION CLIENT','REPLICATION SLAVE' state=present
 
 
 #    - debug: msg="coordinates {{ master_coords.File }} {{ master_coords.Position }}"  
@@ -69,3 +78,6 @@
       mysql_replication: mode=changemaster warnings_filtered=all master_host={{ groups['mysql_master'][0] }} master_log_file={{ master_coords.File }} master_log_pos={{ master_coords.Position }} master_user=repl master_password=ication
     - name: start slave
       mysql_replication: mode=startslave
+
+    - name: set read_only=1
+      command: mysql -e "set global read_only=1;"

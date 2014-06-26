@@ -1,6 +1,6 @@
 [mysqld]
 
-innodb_buffer_pool_size = 26M
+innodb_buffer_pool_size = {{ (memory['stdout_lines'][0]|int * 0.7)|int }}M
 innodb_log_file_size = 512M
 innodb_log_files_in_group = 2
 innodb_log_buffer_size = 16M
@@ -9,5 +9,9 @@ innodb_lock_wait_timeout = 50
 innodb_flush_method = O_DIRECT
 innodb_thread_concurrency = 0
 innodb_max_dirty_pages_pct = 80
-server_id = ${RANDOM}
+innodb_buffer_pool_instances = 12
+innodb_adaptive_hash_index_partitions = 64
+max_connections = 3000
+table_open_cache_instances = 16
+table_open_cache = 8000
 log_bin = binlog

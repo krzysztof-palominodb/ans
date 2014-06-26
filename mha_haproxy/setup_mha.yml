@@ -5,6 +5,7 @@
   hosts:
   - tag_Name_{{ tag1 }}
   - tag_Name_{{ tag2 }}
+  - tag_Name_{{ tag3 }}
   user: ubuntu
   sudo: yes
   gather_facts: false
@@ -26,13 +27,14 @@
    - name: Git checkout
      git: repo=https://github.com/yoshinorim/mha4mysql-node.git dest=/root/mha4mysql-node
    - name: Compile MHA node
-     command: cd /root/mha4mysql-node && perl Makefile.PL && make && make install
+     shell: cd /root/mha4mysql-node && perl Makefile.PL && make && make install
 
 - name: Populate mha_nodes group
 
   hosts:
   - tag_Name_{{ tag1 }}
   - tag_Name_{{ tag2 }}
+  - tag_Name_{{ tag3 }}
   user: ubuntu
   sudo: yes
   gather_facts: false
@@ -49,6 +51,7 @@
   hosts: 
   - tag_Name_{{ tag1 }}
   - tag_Name_{{ tag2 }}
+  - tag_Name_{{ tag3 }}
   user: ubuntu
   sudo: yes
   gather_facts: false
@@ -80,7 +83,7 @@
    - name: Git checkout
      git: repo=https://github.com/yoshinorim/mha4mysql-manager.git dest=/root/mha4mysql-manager
    - name: Compile MHA manager
-     script: command: cd /root/mha4mysql-manager && perl Makefile.PL && make && make install
+     shell: cd /root/mha4mysql-manager && perl Makefile.PL && make && make install
    - name: Setup log directory
      file: path=/var/log/masterha/app1/ state=directory
 
@@ -111,6 +114,7 @@
   hosts:
   - tag_Name_{{ tag1 }}
   - tag_Name_{{ tag2 }}
+  - tag_Name_{{ tag3 }}
   user: ubuntu
   sudo: yes
   gather_facts: false
@@ -129,6 +133,7 @@
   hosts:
   - tag_Name_{{ tag1 }}
   - tag_Name_{{ tag2 }}
+  - tag_Name_{{ tag3 }}
   user: ubuntu
   sudo: yes
   gather_facts: false
@@ -140,12 +145,12 @@
   tasks:
 #   - debug: msg="nodes {{ groups['mha_nodes'] }}"
    - name: Setup config from template
-     template: src=./mha_templates/masterha.j2 dest=/etc/app1.cnf owner=root group=root mode=0644
+     template: src=/Users/krzysztof/git/ans/mha_templates/masterha.j2 dest=/etc/app1.cnf owner=root group=root mode=0644
 
    - name: Install daemontools
      apt: pkg=daemontools state=latest install_recommends=no update_cache=no
 
    - name: Create services for svc
      file: path=/service/masterha_app1/ state=directory
-   - template: src=./mha_templates/run.j2 dest=/service/masterha_app1/run owner=root group=root mode=0755
+   - template: src=/Users/krzysztof/git/ans/mha_templates//run.j2 dest=/service/masterha_app1/run owner=root group=root mode=0755
 
