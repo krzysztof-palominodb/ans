@@ -54,9 +54,11 @@
      template: src=/Users/krzysztof/git/ans/haproxy_templates/mysql-load-balancer.j2 dest=/opt/mysql-load-balancer owner=root group=root mode=755
    - name: Grant privs to mysqlchkusr
      mysql_user: name=mysqlchkusr host=localhost password=S3cr3tP4ss priv=*.*:'REPLICATION CLIENT'/mysql.*:SELECT state=present
-   - name: Start xinetd
-     service: name=xinetd state=restarted
-   - name: Start haproxy
-     service: name=haproxy state=restarted
    - name: Setup a cronjob for /opt/mysql-load-balancer
      cron: name="/opt/mysql-load-balancer" minute="*/5" job="/opt/mysql-load-balancer"
+   - name: Start xinetd
+     service: name=xinetd state=restarted
+   - name: Enable haproxy
+     lineinfile: dest=/etc/default/haproxy regexp=ENABLED=[01] line=ENABLED=1 
+   - name: Start haproxy
+     service: name=haproxy state=restarted
