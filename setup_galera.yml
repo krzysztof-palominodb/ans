@@ -1,0 +1,139 @@
+- name: Populate galera_nodes group
+
+  hosts:
+  - tag_Name_{{ node1 }}
+  - tag_Name_{{ node2 }}
+  - tag_Name_{{ node3 }}
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+  serial: 1
+
+  tasks:
+
+   - debug: msg="name={{ ec2_private_ip_address }}"
+   - add_host: name={{ ec2_private_ip_address }} groups=galera_nodes
+   - debug: msg="nodes {{ groups['galera_nodes'] }}"
+
+
+- name: Populate galera_master group
+  hosts:
+  - tag_Name_{{ node1 }}
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+  serial: 1
+
+  tasks:
+
+   - debug: msg="name={{ ec2_private_ip_address }}"
+   - add_host: name={{ ec2_private_ip_address }} groups=galera_master
+   - debug: msg="nodes {{ groups['galera_master'] }}"
+
+
+- name: Configure servers
+  hosts:
+  - tag_Name_{{ node1 }}
+  - tag_Name_{{ node2 }}
+  - tag_Name_{{ node3 }}
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+
+  tags:
+    - config
+    - configure
+
+  tasks:
+
+    - name: Add Percona repository
+      action: command apt-key adv --keyserver keys.gnupg.net --recv-keys 1C4CBDCDCD2EFD2A
+
+    - name: Get Ubuntu version
+      shell: grep main /etc/apt/sources.list | grep -v \# | grep -v "\-security" | grep -v "\-updates" | awk '{print $3}' | uniq
+      register: ubuntu_version
+
+    - name: Ensure deb entry is in place
+      lineinfile: dest=/etc/apt/sources.list regexp='^deb http://repo.percona.com' line='deb http://repo.percona.com/apt {{ ubuntu_version['stdout_lines'][0] }} main'
+
+    - name: Ensure deb-src entry is in place
+      lineinfile: dest=/etc/apt/sources.list regexp='^deb-src http://repo.percona.com' line='deb-src http://repo.percona.com/apt {{ ubuntu_version['stdout_lines'][0] }} main'
+
+    - name: Ensure /etc/mysql/ exists
+      file: path=/etc/mysql state=directory mode=755
+
+    - name: Check available memory on the host
+      shell: "free -m | grep Mem: | awk '{print $2}'"
+      register: memory
+
+    - name: Get local IP of the host
+      shell: ip a | grep eth0 | grep inet | awk '{print $2}' | cut -d / -f 1
+#      register: {{ ipaddress['stdout_lines'][0] }}
+      register: ipaddress
+
+    - name: Create my.cnf from template
+      template: src=./templates/my_galera.cnf.j2 dest=/etc/mysql/my.cnf owner=root group=root mode=0644
+
+    - name: Generate random server_id
+      lineinfile: dest=/etc/mysql/my.cnf regexp='server_id = [0-9]+.*' line='server_id = {{ 999999|random }}'
+
+- name: Configure first node
+  hosts:
+  - tag_Name_{{ node1 }}
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+
+  tasks:
+
+    - name: Set empty gcomm
+      lineinfile: dest=/etc/mysql/my.cnf regexp='wsrep_cluster_address=gcomm:// ' line='wsrep_cluster_address=gcomm://'
+
+    - name: Install Percona XtraDB Cluster
+      apt: pkg=percona-xtradb-cluster-server-5.6 state=latest install_recommends=no update_cache=yes
+
+    - name: Install python-mysqldb
+      apt: pkg=python-mysqldb state=latest install_recommends=no
+
+    - name: Create user
+      mysql_user: name=root host=% password=secretpass priv=*.*:'ALL' state=present
+
+    - name: Create SST user
+      mysql_user: name=sstuser host=localhost password=s3cretPass priv=*.*:'RELOAD, LOCK TABLES, REPLICATION CLIENT' state=present
+#      mysql_user: name=sstuser host=localhost password=s3cretPass priv=*.*:'ALL' state=present
+
+#    - name: Stop Percona XtraDB Cluster
+#      service: name=mysql state=stopped
+
+    - name: Create my.cnf from template
+      template: src=./templates/my_galera.cnf.j2 dest=/etc/mysql/my.cnf owner=root group=root mode=0644
+
+    - name: Generate random server_id
+      lineinfile: dest=/etc/mysql/my.cnf regexp='server_id = [0-9]+.*' line='server_id = {{ 999999|random }}'
+
+- name: Finish configuring servers
+  hosts:
+  - tag_Name_{{ node1 }}
+  - tag_Name_{{ node2 }}
+  - tag_Name_{{ node3 }}
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+
+  tasks:
+
+    - name: Install Percona XtraDB Cluster
+      apt: pkg=percona-xtradb-cluster-server-5.6 state=latest install_recommends=no update_cache=yes
+
+    - name: Install python-mysqldb
+      apt: pkg=python-mysqldb state=latest install_recommends=no
+
+    - name: Create user
+      mysql_user: name=root host=% password=secretpass priv=*.*:'ALL' state=present
+
+    - name: Create SST user
+      mysql_user: name=sstuser host=localhost password=s3cretPass priv=*.*:'RELOAD, LOCK TABLES, REPLICATION CLIENT' state=present
+
+
+    - name: Stop Percona XtraDB Cluster
+      service: name=mysql state=started
