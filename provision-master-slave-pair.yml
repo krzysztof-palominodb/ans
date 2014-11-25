@@ -97,9 +97,15 @@
     - name: Ensure /etc/mysql/ exists
       file: path=/etc/mysql state=directory mode=755
 
+    - name: Check available memory on the host
+      shell: "free -m | grep Mem: | awk '{print $2}'"
+      register: memory
 
-    - name: Copy my.cnf.sh to remote host and execute it
-      script: ./my.cnf.sh
+    - name: Create my.cnf from template
+      template: src=./templates/my.cnf.j2 dest=/etc/mysql/my.cnf owner=root group=root mode=0644
+
+    - name: Generate random server_id
+      lineinfile: dest=/etc/mysql/my.cnf regexp='server_id = [0-9]+.*' line='server_id = {{ 999999|random }}'
 
     - name: Install Percona Server
       apt: pkg=percona-server-server-5.6 state=latest install_recommends=no update_cache=yes

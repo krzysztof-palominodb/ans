@@ -1,0 +1,56 @@
+#!/bin/bash
+GALERASTATE="/dev/shm/mysql-loadbalancer-monitor-galerastate"
+RUNNINGSTATE="/dev/shm/mysql-loadbalancer-monitor-runningstate"
+ERRORCOUNTS="/dev/shm/mysql-loadbalancer-monitor-errorcounts"
+
+GSTATE="$(/bin/cat $GALERASTATE)"
+RSTATE="$(/bin/cat $RUNNINGSTATE)"
+if [ "$RSTATE" == "DOWN" ]
+then
+    # mysql is down, return http 503
+    /bin/echo -e "HTTP/1.1 503 Service Unavailable\r\n"
+    /bin/echo -e "Content-Type: Content-Type: text/plain\r\n"
+    /bin/echo -e "\r\n"
+    /bin/echo -e "MySQL is *down*.\r\n"
+    /bin/echo -e "\r\n"
+elif [ "$RSTATE" == "UP" ]
+then
+    if [ "$GSTATE" == "SYNCED" ]
+    then
+        # mysql is fine, return http 200
+        /bin/echo -e "HTTP/1.1 200 OK\r\n"
+        /bin/echo -e "Content-Type: Content-Type: text/plain\r\n"
+        /bin/echo -e "\r\n"
+        /bin/echo -e "Percona XtraDB Cluster Node is synced.\r\n"
+        /bin/echo -e "\r\n"
+    elif [ "$GSTATE" == "UNSYNCED" ]
+    then
+        # mysql is fine, return http 200
+        /bin/echo -e "HTTP/1.1 503 Service Unavailable\r\n"
+        /bin/echo -e "Content-Type: Content-Type: text/plain\r\n"
+        /bin/echo -e "\r\n"
+        /bin/echo -e "Percona XtraDB Cluster Node is not synced.\r\n"
+        /bin/echo -e "\r\n"
+    elif [ "$GSTATE" == "READONLY" ]
+    then
+        /bin/echo -e "HTTP/1.1 503 Service Unavailable\r\n"
+        /bin/echo -e "Content-Type: Content-Type: text/plain\r\n"
+        /bin/echo -e "\r\n"
+        /bin/echo -e "Percona XtraDB Cluster Node is read-only.\r\n"
+        /bin/echo -e "\r\n"
+    else
+        # WTF?!?, return http 503
+        /bin/echo -e "HTTP/1.1 503 Service Unavailable\r\n"
+        /bin/echo -e "Content-Type: Content-Type: text/plain\r\n"
+        /bin/echo -e "\r\n"
+        /bin/echo -e "MASTER STATE UNDEFINED. HEALTH CHECK ISSUE!!!.\r\n"
+        /bin/echo -e "\r\n"
+    fi
+else
+    # WTF?!?, return http 503
+    /bin/echo -e "HTTP/1.1 503 Service Unavailable\r\n"
+    /bin/echo -e "Content-Type: Content-Type: text/plain\r\n"
+    /bin/echo -e "\r\n"
+    /bin/echo -e "RUNNING STATE UNDEFINED. HEALTH CHECK ISSUE!!!.\r\n"
+    /bin/echo -e "\r\n"
+fi

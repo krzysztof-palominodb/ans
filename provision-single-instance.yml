@@ -11,8 +11,8 @@
 
   vars:
       keypair: kkkey
-      instance_type: m3.large
-#      instance_type: r3.4xlarge
+      instance_type: m3.xlarge
+#      instance_type: i2.4xlarge
       security_group: haproxy
       # bitnami-cloud-us-west-2/lampstack/bitnami-lampstack-5.4.11-1-linux-ubuntu-12.04.1-x86_64-s3.manifest.xml
       image: ami-1d8c9574 # hvm
@@ -48,37 +48,4 @@
         tags:
           Name: '{{ tag }}'
 
-
-# Now, configure our new servers
-
-#- name: Configure servers
-#  hosts: mysql
-#  user: ubuntu
-#  sudo: yes
-#  gather_facts: false
-
-#  tags:
-#    - config
-#    - configure
-
-#  tasks:
-
-#    - name: Add Percona repository
-#      action: command apt-key adv --keyserver keys.gnupg.net --recv-keys 1C4CBDCDCD2EFD2A
-
-#    - name: Add Percona step 2
-#      script: ./repo.sh
-
-#    - name: Ensure /etc/mysql/ exists
-#      file: path=/etc/mysql state=directory mode=755
-
-
-#    - name: Copy my.cnf.sh to remote host and execute it
-#      script: ./my.cnf.sh
-
-#    - name: Install Percona Server
-#      apt: pkg=percona-server-server-5.6 state=latest install_recommends=no update_cache=yes
-
-#    - name: Install python-mysqldb
-#      apt: pkg=python-mysqldb state=latest install_recommends=no
 

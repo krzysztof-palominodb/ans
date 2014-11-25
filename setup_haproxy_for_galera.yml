@@ -1,0 +1,76 @@
+---
+
+- name: Fill group
+
+  hosts:
+  - tag_Name_{{ tag1 }}
+  - tag_Name_{{ tag2 }}
+  - tag_Name_{{ tag3 }}
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+  serial: 1
+
+  tags:
+    - config
+    - configure
+
+  tasks:
+
+   - add_host: name={{ ec2_dns_name }} groups=ha_nodes
+
+
+- name: Setup checks
+
+  hosts:
+  - tag_Name_{{ tag1 }}
+  - tag_Name_{{ tag2 }}
+  - tag_Name_{{ tag3 }}
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+
+  tags:
+    - config
+    - configure
+
+  tasks:
+
+   - name: Install xinetd
+     apt: pkg=xinetd state=latest install_recommends=no update_cache=no 
+   - name: Setup galerachk xinetd service from template
+     template: src=/Users/krzysztof/git/ans/galera_templates/galerachk.j2 dest=/etc/xinetd.d/galerachk owner=root group=root mode=0644
+   - name: Ensure galerachk is enabled in /etc/services
+     lineinfile: "dest=/etc/services regexp=^galerachk line='galerachk        3301/tcp                        # galerachk'"
+   - name: Setup /opt/galerachk from template
+     template: src=/Users/krzysztof/git/ans/galera_templates/galerachk.sh.j2 dest=/opt/galerachk owner=root group=root mode=755
+   - name: Setup /opt/mysql-load-balancer from template
+     template: src=/Users/krzysztof/git/ans/galera_templates/mysql-load-balancer.j2 dest=/opt/mysql-load-balancer owner=root group=root mode=755
+   - name: Grant privs to mysqlchkusr
+     mysql_user: name=mysqlchkusr host=localhost password=S3cr3tP4ss priv=*.*:'REPLICATION CLIENT'/mysql.*:SELECT state=present
+   - name: Setup a cronjob for /opt/mysql-load-balancer
+     cron: name="/opt/mysql-load-balancer" minute="*/5" job="/opt/mysql-load-balancer"
+   - name: Start xinetd
+     service: name=xinetd state=restarted
+
+- name: Setup haproxy
+
+  hosts:
+  - tag_Name_{{ haprx1 }}
+  - tag_Name_{{ haprx2 }}
+  - tag_Name_{{ haprx3 }}
+  user: ubuntu
+  sudo: yes
+  gather_facts: false
+
+  tasks:
+
+#   - debug: msg="group {{ groups['ha_nodes'] }}"
+   - name: Install haproxy
+     apt: pkg=haproxy state=latest install_recommends=no update_cache=yes 
+   - name: Setup haproxy config from template
+     template: src=/Users/krzysztof/git/ans/galera_templates/haproxy.conf.j2 dest=/etc/haproxy/haproxy.cfg owner=root group=root mode=0644
+   - name: Enable haproxy
+     lineinfile: dest=/etc/default/haproxy regexp=ENABLED=[01] line=ENABLED=1 
+   - name: Start haproxy
+     service: name=haproxy state=restarted
