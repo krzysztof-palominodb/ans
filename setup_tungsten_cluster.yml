@@ -247,6 +247,12 @@
     - name: Install ruby
       yum: name=ruby state=present
 
+    - name: Setup path to /opt/tungsten/continuent/tungsten/tungsten-manager/bin
+      lineinfile: 'dest=/home/tungsten/.bashrc regexp="^PATH=$PATH:/opt/tungsten/continuent/tungsten" line="PATH=$PATH:/opt/tungsten/continuent/tungsten/tungsten-manager/bin:/opt/tungsten/continuent/tungsten/tungsten-connector/bin:/opt/tungsten/continuent/tungsten/tungsten-replicator/bin"'
+
+    - name: Export PATH
+      lineinfile: dest=/home/tungsten/.bashrc regexp="^export PATH" line="export PATH"
+
 
 - name: Copy Tungsten tarball
 
