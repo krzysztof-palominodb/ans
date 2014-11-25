@@ -4,7 +4,7 @@
   - tag_Name_{{ node1 }}
   - tag_Name_{{ node2 }}
   - tag_Name_{{ node3 }}
-  - tag_Name_{{ watcher }}
+  - tag_Name_{{ witness }}
   - tag_Name_{{ deploy }}
   user: ec2-user
   sudo: yes
@@ -42,6 +42,7 @@
   - tag_Name_{{ node1 }}
   - tag_Name_{{ node2 }}
   - tag_Name_{{ node3 }}
+  - tag_Name_{{ witness }}
   user: ec2-user
   sudo: yes
   gather_facts: false
@@ -67,6 +68,7 @@
   - tag_Name_{{ node1 }}
   - tag_Name_{{ node2 }}
   - tag_Name_{{ node3 }}
+  - tag_Name_{{ witness }}
   user: ec2-user
   sudo: no
   gather_facts: false
@@ -123,6 +125,9 @@
     - name: Install Percona Server
       yum: name=Percona-Server-server-55 state=present
 
+    - name: Install xtrabackup
+      yum: name=percona-xtrabackup state=present
+
     - name: Start Percona Server
       service: name=mysql state=started
 
@@ -149,7 +154,7 @@
   - tag_Name_{{ node1 }}
   - tag_Name_{{ node2 }}
   - tag_Name_{{ node3 }}
-  - tag_Name_{{ watcher }}
+  - tag_Name_{{ witness }}
   - tag_Name_{{ deploy }}
   user: ec2-user
   sudo: yes
@@ -248,11 +253,19 @@
       yum: name=ruby state=present
 
     - name: Setup path to /opt/tungsten/continuent/tungsten/tungsten-manager/bin
-      lineinfile: 'dest=/home/tungsten/.bashrc regexp="^PATH=$PATH:/opt/tungsten/continuent/tungsten" line="PATH=$PATH:/opt/tungsten/continuent/tungsten/tungsten-manager/bin:/opt/tungsten/continuent/tungsten/tungsten-connector/bin:/opt/tungsten/continuent/tungsten/tungsten-replicator/bin"'
+      lineinfile: 'dest=/home/tungsten/.bashrc regexp="^PATH=$PATH:/opt/tungsten/continuent/tungsten" line="PATH=$PATH:/opt/tungsten/continuent/tungsten/tungsten-manager/bin:/opt/tungsten/continuent/tungsten/tungsten-connector/bin:/opt/tungsten/continuent/tungsten/tungsten-replicator/bin:/opt/tungsten/continuent/tungsten/tools/"'
 
     - name: Export PATH
       lineinfile: dest=/home/tungsten/.bashrc regexp="^export PATH" line="export PATH"
 
+    - name: Setup path to /opt/tungsten/continuent/tungsten/tungsten-manager/bin for root
+      lineinfile: 'dest=/root/.bashrc regexp="^PATH=$PATH:/opt/tungsten/continuent/tungsten" line="PATH=$PATH:/opt/tungsten/continuent/tungsten/tungsten-manager/bin:/opt/tungsten/continuent/tungsten/tungsten-connector/bin:/opt/tungsten/continuent/tungsten/tungsten-replicator/bin:/opt/tungsten/continuent/tungsten/tools/"'
+
+    - name: Export PATH for root
+      lineinfile: dest=/root/.bashrc regexp="^export PATH" line="export PATH"
+
+    - name: Create local my.cnf from template
+      template: src=./tungsten_templates/local_my.cnf.j2 dest=/home/tungsten/.my.cnf owner=tungsten group=tungsten mode=0640
 
 - name: Copy Tungsten tarball
 
